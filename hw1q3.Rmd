@@ -1,0 +1,445 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+editor_options:
+  chunk_output_type: console
+---
+
+```{r libraries,echo=FALSE, message=FALSE,warning=FALSE}
+library(RandomFields)
+library(MASS)
+```
+
+# Question 3
+```{r covariograms, echo=FALSE}
+# Spherical 
+phi.sphere = 1 / 0.811401
+covar.function.sphere = function(tau){
+  sigma = 1; 
+  phi = phi.sphere
+  if(tau >= phi) {cov = 0}
+  else{cov = 1 - (3/2)*(tau/phi) + 0.5 * (tau/phi)^3}
+  return(cov)
+}
+co.spherical = function(x) sapply(x, covar.function.sphere)
+
+# Exponential
+covar.function.exp.nu0.5 = function(tau){
+  nu = 0.5
+  sigma = 1
+  phi = 1/(-log(0.05))^2
+  cov = sigma^2 * (exp(-abs(tau/phi)^nu))
+  return(cov)
+}
+co.exp.nu0.5 = function(x) sapply(x, covar.function.exp.nu0.5)
+
+covar.function.exp.nu1 = function(tau){
+  nu = 1
+  sigma = 1
+  phi = -1/log(0.05)
+  cov = sigma^2 * (exp(-abs(tau/phi)^nu))
+  return(cov)
+}
+co.exp.nu1 = function(x) sapply(x, covar.function.exp.nu1)
+covar.function.exp.nu2 = function(tau){
+  nu = 2
+  sigma = 1
+  phi = 1/sqrt(-log(0.05))
+  cov = sigma^2 * (exp(-abs(tau/phi)^nu))
+  return(cov)
+}
+co.exp.nu2 = function(x) sapply(x, covar.function.exp.nu2)
+
+# Rational Quadratic
+covar.function.quad = function(tau){
+  sigma = 1
+  phi = 0.229416
+  cov = sigma^2 * (1-(tau^2/(phi^2 + tau^2)))
+  return(cov)
+}
+co.quad = function(x) sapply(x, covar.function.quad)
+
+# Wave
+covar.function.wave = function(tau){
+  sigma=1
+  phi=0.33459
+  cov = sigma^2 * (sin(tau/phi)/(tau/phi))
+  if(is.nan(cov)){return(sigma^2)}
+  else{
+    return(cov)}
+}
+co.wave = function(x) sapply(x, covar.function.wave)
+
+# Matern
+covar.function.matern0.5 = function(tau){
+  nu = 1/2
+  sigma=1; phi = 0.333808
+  cov = sigma^2/(gamma(nu)*2^(nu-1)) * (tau/phi)^nu * besselK(tau/phi, nu)
+  if(is.nan(cov)){return(sigma)}
+  else{return(cov)}
+}
+co.matern0.5 = function(x) sapply(x, covar.function.matern0.5)
+
+covar.function.matern3.2 = function(tau){
+  nu=3/2
+  sigma=1; phi = 0.210799
+  cov = sigma^2/(gamma(nu)*2^(nu-1)) * (tau/phi)^nu * besselK(tau/phi, nu)
+  if(is.nan(cov)){return(sigma)}
+  else{return(cov)}
+  
+}
+co.matern3.2 = function(x) sapply(x, covar.function.matern3.2)
+covar.function.matern5.2 = function(tau) {
+  nu=5/2
+  sigma=1; phi = 0.168957
+  cov = sigma^2/(gamma(nu)*2^(nu-1)) * (tau/phi)^nu * besselK(tau/phi, nu)
+  if(is.nan(cov)){return(sigma)}
+  else{return(cov)}
+}
+co.matern5.2 = function(x) sapply(x, covar.function.matern5.2)
+```
+
+```{r variograms, echo=FALSE}
+# Spherical
+semi.spherical.function = function(tau) { 
+  sigma2 = 1
+  phi = 1 / 0.811401
+  if(tau >= phi) {cov = sigma2}
+  else{cov =  sigma2*(1.5*(tau/phi) - 0.5 * (tau/phi)^3)}
+  return(cov)
+}
+semi.sphere = function(x) sapply(x, semi.spherical.function)
+
+# Exponential
+semi.exp.function0.5 = function(tau){
+  nu = 0.5
+  sigma = 1
+  phi = 1/(-log(0.05))^2
+  cov = sigma^2 * (1 - exp(-abs(tau/phi)^nu))
+  return(cov)
+}
+semi.exp0.5 = function(x) sapply(x, semi.exp.function0.5)
+semi.exp.function1 = function(tau){
+  nu = 1
+  sigma = 1
+  phi = -1/log(0.05)
+  cov = sigma^2 * (1 - exp(-abs(tau/phi)^nu))
+  return(cov)
+}
+semi.exp1 = function(x) sapply(x, semi.exp.function1)
+semi.exp.function2 = function(tau){
+  nu = 2
+  sigma = 1
+  phi = 1/sqrt(-log(0.05))
+  cov = sigma^2 * (1 - exp(-abs(tau/phi)^nu))
+  return(cov)
+}
+semi.exp2 = function(x) sapply(x, semi.exp.function2)
+
+# Rational Quadratic
+semi.quad.function = function(tau){
+  sigma = 1
+  phi = 0.229416
+  cov = (sigma^2*tau^2)/(phi^2 + tau^2)
+  return(cov)
+}
+semi.quad = function(x) sapply(x, semi.quad.function)
+
+
+# Wave
+semi.wave.function = function(tau){
+  sigma=1
+  phi=0.33459
+  cov = sigma^2 * (1 - (sin(tau/phi)/(tau/phi)))
+  if(is.nan(cov)){return(sigma^2)}
+  else{
+    return(cov)}
+}
+semi.wave = function(x) sapply(x, semi.wave.function)
+
+
+# Matern
+semi.matern0.5.function = function(tau){
+  nu = 0.5
+  sigma=1; phi = 0.333808
+  cov = 1 - ((tau/phi)^(nu)/(2^(nu-1)*gamma(nu))) * besselK(tau/phi, nu)
+  if(is.nan(cov)){return(sigma)}
+  else{return(cov)}
+}
+semi.matern0.5 = function(x) sapply(x, semi.matern0.5.function)
+semi.matern3.2.function = function(tau){
+  nu = 1.5
+  sigma=1; phi = 0.210799
+  cov = 1 - ((tau/phi)^(nu)/(2^(nu-1)*gamma(nu))) * besselK(tau/phi, nu)
+  if(is.nan(cov)){return(sigma)}
+  else{return(cov)}
+}
+semi.matern3.2 = function(x) sapply(x, semi.matern3.2.function)
+semi.matern5.2.function = function(tau) {
+  nu = 5/2
+  sigma=1; phi = 0.168957
+  cov = 1 - ((tau/phi)^(nu)/(2^(nu-1)*gamma(nu))) * besselK(tau/phi, nu)
+  if(is.nan(cov)){return(sigma)}
+  else{return(cov)}
+}
+semi.matern5.2 = function(x) sapply(x, semi.matern5.2.function)
+```
+
+## Covariogram Plots
+```{r covariogram plots, echo=FALSE,fig.height=4}
+### Spherical
+curve(co.spherical(x), main="Spherical Covariogram",
+      xlim = c(0,1.6), lwd=2, xlab=expression(tau),
+      ylab=expression(C(tau)),
+      col="green")
+legend("bottomleft", legend = c(expression(C(tau)), expression(phi)),
+       col = c("green","grey"), lty=c(1,2), lwd=c(2,1))
+abline(v=1 / 0.811401, lty=2, col="grey")
+
+### Exponential
+curve(co.exp.nu0.5(x), main="Exponential Covariogram",
+      xlim = c(0, 2), lwd=2, xlab=expression(tau),
+      ylab=expression(C(tau)),
+      col="blue", lty=3)
+curve(co.exp.nu1(x),
+      xlim = c(0, 2), add=TRUE,
+      col="purple", lty=2, lwd=2)
+curve(co.exp.nu2(x),
+      xlim = c(0, 2), add=TRUE,
+      col="pink", lty=1, lwd=2)
+legend("topright", legend = c(expression(nu*" = 0.5"),
+                              expression(nu*" = 1"), 
+                              expression(nu*" = 2")), 
+       col = c("blue","purple","pink"), lty=c(3,2,1), lwd=2)
+
+### Rational Quadratic
+curve(co.quad(x), main="Rational Quadratic Covariogram",
+      xlim = c(0,2), lwd=2, xlab=expression(tau),
+      ylab=expression(C(tau)),
+      col="red")
+abline(v=0.229416, lty=2, col="grey")
+legend("topright", legend = c(expression(C(tau)), expression(phi)),
+       col = c("red","grey"), lty=c(1,2), lwd=c(2,1))
+
+### Wave
+curve(co.wave(x), main="Wave Covariogram",
+      xlim = c(0,12), lwd=2, xlab=expression(tau),
+      ylab=expression(C(tau)),
+      col="cornflowerblue")
+abline(v=0.33459, lty=2, col="grey")
+legend("topright", legend = c(expression(C(tau)), expression(phi)),
+       col = c("cornflowerblue","grey"), lty=c(1,2), lwd=c(2,1))
+
+### Matern
+curve(co.matern0.5(x), main="Matern Covariogram",
+      xlim = c(0, 2), xlab=expression(tau),
+      ylab=expression(C(tau)),
+      col="darkseagreen4", lty=1, lwd=2)
+curve(co.matern3.2(x), 
+      xlim = c(0, 2), lwd=2, add=TRUE,
+      col="cadetblue", lty=2)
+curve(co.matern5.2(x), 
+      xlim = c(0, 2), lwd=2, add=TRUE,
+      col="deeppink3", lty=4)
+legend("topright", legend = c(expression(nu*" = 1/2"),
+                              expression(nu*" = 3/2"),
+                              expression(nu*" = 5/2")),
+       col = c("darkseagreen4","cadetblue", "deeppink3"), 
+       lty=c(1,2,4), lwd=2)
+```
+
+## Variogram Plots
+```{r variogram plots, echo=FALSE, fig.height=4}
+### Spherical
+curve(semi.sphere(x), main="Spherical Variogram",
+      xlim = c(0,1.6), lwd=2, xlab=expression(tau),
+      ylab=expression(C(tau)),
+      col="mediumseagreen")
+legend("topleft", legend = c(expression(lambda(tau)), expression(phi)),
+       col = c("mediumseagreen","grey"), lty=c(1,2), lwd=c(2,1))
+abline(v=1 / 0.811401, lty=2, col="grey")
+
+### Exponential
+curve(semi.exp.function0.5(x), main="Exponential Variogram",
+      xlim = c(0, 2), lwd=2, xlab=expression(tau),
+      ylab=expression(lambda(tau)),
+      col="blue", lty=3)
+curve(semi.exp.function1(x),
+      xlim = c(0, 2), add=TRUE,
+      col="purple", lty=2, lwd=2)
+curve(semi.exp.function2(x),
+      xlim = c(0, 2), add=TRUE,
+      col="pink", lty=1, lwd=2)
+legend("bottomright", legend = c(expression(nu*" = 0.5"),
+                              expression(nu*" = 1"), 
+                              expression(nu*" = 2")), 
+       col = c("blue","purple","pink"), lty=c(3,2,1), lwd=2)
+
+### Rational Quadratic
+curve(semi.quad(x), main="Rational Quadratic Variogram",
+      xlim = c(0,2), lwd=2, xlab=expression(tau),
+      ylab=expression(C(tau)),
+      col="red")
+abline(v=0.229416, lty=2, col="grey")
+legend("bottomright", legend = c(expression(C(tau)), expression(phi)),
+       col = c("red","grey"), lty=c(1,2), lwd=c(2,1))
+
+### Wave
+curve(semi.wave(x), main="Wave Variogram",
+      xlim = c(0.000001,12), lwd=2, xlab=expression(tau),
+      ylab=expression(C(tau)),
+      col="cornflowerblue")
+abline(v=0.33459, lty=2, col="grey")
+legend("bottomright", legend = c(expression(C(tau)), expression(phi)),
+       col = c("cornflowerblue","grey"), lty=c(1,2), lwd=c(2,1))
+
+### Matern
+curve(semi.matern0.5(x), main="Matern Variogram",
+      xlim = c(0.00001, 2), xlab=expression(tau),
+      ylab=expression(C(tau)),
+      col="darkseagreen4", lty=1, lwd=2)
+curve(semi.matern3.2(x), lwd=2, add=TRUE,
+      col="cadetblue", lty=2)
+curve(semi.matern5.2(x),  lwd=2, add=TRUE,
+      col="deeppink3", lty=4)
+legend("bottomright", legend = c(expression(nu*" = 1/2"),
+                              expression(nu*" = 3/2"),
+                              expression(nu*" = 5/2")),
+       col = c("darkseagreen4","cadetblue", "deeppink3"), 
+       lty=c(1,2,4), lwd=2)
+```
+
+# Question 4
+
+```{r simulations q4, echo=FALSE, warning=FALSE,message=FALSE, fig.height=5}
+set.seed(567)
+RFoptions(seed=0)
+n=100
+# Simulate 
+m.x = rep(0,length = 100)
+x = seq(-5,5, length.out = 100); y = seq(-5,5,length.out = 100)
+
+# Spherical
+{
+  covar.mat.sphere = matrix(NA,nrow=100,ncol=100)
+  for (i in 1:length(x)){
+    for (j in 1:length(y)){
+      dist= abs(x[i] - y[j])
+      val = covar.function.sphere(tau = dist)
+      covar.mat.sphere[i,j] = val
+    }
+  }
+  simu.sphere = mvrnorm(1, mu = m.x, Sigma = covar.mat.sphere)
+  plot(as.matrix(x,ncol=1), simu.sphere, ylab="Value", xlab="",
+       main="Spherical RF Simulations", type="l",ylim=c(-4,2))
+  
+  # RF Package
+  sphere.model.rf = RMspheric(var=1,scale=phi.sphere)
+  rf.simu.sphere = RFsimulate(sphere.model.rf, x, 1, n=1)
+  lines(as.matrix(x,ncol=1), rf.simu.sphere$variable1, type="l",
+       xlab="", ylab="Value", col="blue")
+    legend("bottomleft", legend = c("mvrnorm()", "RandomFields"),
+       col = c("black","blue"), lty=1)
+}
+
+# Powered Exponential (nu = 1)
+{
+  covar.mat.exp = matrix(NA,nrow=100,ncol=100)
+  for (i in 1:length(x)){
+    for (j in 1:length(y)){
+      dist= abs(x[i] - y[j])
+      val = covar.function.exp.nu1(tau = dist)
+      covar.mat.exp[i,j] = val
+    }
+  }
+  simu.exp = mvrnorm(1, mu = m.x, Sigma = covar.mat.exp)
+  plot(as.matrix(x,ncol=1), simu.exp, pch=16, ylab="Value", xlab="", type="l", 
+       main="Simulations - Powered Exponential Covariance", ylim=c(-3,2),
+       sub=expression(nu*" = 1"))
+  
+  # Exponential Model
+  exp.model = RMexp(scale = -1/log(0.05), var = 1)
+  rf.simu.exp = RFsimulate(exp.model, x, 1, n=1)
+  lines(as.matrix(x,ncol=1), rf.simu.exp$variable1, type="l", lty=2,
+        sub=expression(nu*" = 1"), col = "blue", xlab="", ylab="Value")
+  legend("bottomleft", legend = c("mvrnorm()", "RandomFields"),
+         col = c("black","blue"), lty=c(1,2))
+}
+
+
+# Rational Quadratic
+{
+  covar.mat.quad = matrix(NA,nrow=100,ncol=100)
+  for (i in 1:length(x)){
+    for (j in 1:length(y)){
+      dist= abs(x[i] - y[j])
+      val = covar.function.quad(tau = dist)
+      covar.mat.quad[i,j] = val
+    }
+  }
+  simu.quad = mvrnorm(1, mu = m.x, Sigma = covar.mat.quad)
+  plot(as.matrix(x,ncol=1),simu.quad, pch=16, ylab="Value", xlab="",
+       main="Simulations - Rational Quadratic Covariance", type="l",
+       ylim=c(-3,2))
+  
+  quad.model = RMuser(type = "positive definite", domain="single variable",
+                      iso="isotropic",
+                      fctn=covar.function.quad(x))
+  rf.simu.quad = RFsimulate(quad.model, x, 1, n=1)
+  lines(as.matrix(x,ncol=1), rf.simu.quad$variable1, type="l",
+       xlab="", ylab="Value", col="blue", lty=2)
+  legend("bottomleft", legend = c("mvrnorm()", "RandomFields"),
+       col = c("black","blue"), lty=c(1,2))
+}
+
+
+# Wave
+{
+  covar.mat.wave = matrix(NA,nrow=100,ncol=100)
+  for (i in 1:length(x)){
+    for (j in 1:length(y)){
+      dist= abs(x[i] - y[j])
+      val = covar.function.wave(tau = dist)
+      covar.mat.wave[i,j] = val
+    }
+  }
+  simu.wave = mvrnorm(1, mu = m.x, Sigma = covar.mat.wave)
+  plot(as.matrix(x,ncol=1), simu.wave,  ylim=c(-3,3), xlab="",
+       type="l", ylab="Value", main="Simulations - Wave Covariance")
+
+  wave.model = RMwave(var = 1, scale = 0.33459)
+  rf.simu.wave = RFsimulate(wave.model, x, 1, n=1)
+  lines(as.matrix(x,ncol=1), rf.simu.wave$variable1, type="l",
+       xlab="", ylab="Value", col="blue", lty=2)
+      legend("bottomleft", legend = c("mvrnorm()", "RandomFields"),
+       col = c("black","blue"), lty=c(1,2))
+}
+
+
+# Matern
+{
+  covar.mat.matern = matrix(NA,nrow=100,ncol=100)
+  for (i in 1:length(x)){
+    for (j in 1:length(y)){
+      dist= abs(x[i] - y[j])
+      val = covar.function.matern0.5(tau = dist)
+      covar.mat.matern[i,j] = val
+    }
+  }
+  simu.matern = mvrnorm(1, mu = m.x, Sigma = covar.mat.matern)
+  plot(as.matrix(x,ncol=1),simu.matern, ylab="Value", xlab="", 
+       main="Simulations - Matern Covariance", sub=expression(nu*" = 1/2"),
+       type="l", ylim=c(-3,2))
+  # Matern RF package
+  matern.model = RMmatern(nu = 1/2, var = 1, scale = 0.333808)
+  rf.simu.matern = RFsimulate(matern.model, x, 1, n=1)
+  lines(as.matrix(x,ncol=1), rf.simu.matern$variable1, type="l",
+       sub=expression(nu*" = 1/2"), lty=2,
+       xlab="", ylab="Value", col="blue")
+      legend("bottomleft", legend = c("mvrnorm()", "RandomFields"),
+       col = c("black","blue"), lty=c(1,2))
+}
+```
+
+
